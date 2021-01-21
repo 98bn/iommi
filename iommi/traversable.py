@@ -7,10 +7,8 @@ from typing import (
 )
 
 from tri_declarative import (
-    dispatch,
     Refinable,
     refinable,
-    RefinableObject,
 )
 from tri_struct import Struct
 
@@ -24,18 +22,14 @@ from iommi.evaluate import (
     evaluate_strict,
     evaluate_strict_container,
 )
+from iommi.refinable import (
+    is_evaluated_refinable,
+    RefinableObject,
+)
 from iommi.style import (
     apply_style,
     get_iommi_style_name,
 )
-
-
-class EvaluatedRefinable(Refinable):
-    pass
-
-
-def is_evaluated_refinable(x):
-    return isinstance(x, EvaluatedRefinable) or getattr(x, '__iommi__evaluated', False)
 
 
 class PathNotFoundException(Exception):
@@ -56,18 +50,19 @@ class Traversable(RefinableObject):
     context = None
 
     iommi_style: str = Refinable()
+    assets = Refinable()
+    endpoints = Refinable()
 
     _declared_members: Dict[str, 'Traversable']
     _bound_members: Dict[str, 'Traversable']
 
-    @dispatch
     def __init__(self, _name=None, **kwargs):
         self._declared_members = Struct()
         self._bound_members = None
         self._evaluate_parameters = None
         self._name = _name
 
-        super(Traversable, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def __repr__(self):
         n = f'{self._name}' if self._name is not None else ''
@@ -116,25 +111,33 @@ class Traversable(RefinableObject):
         assert self._is_bound, NOT_BOUND_MESSAGE
         return build_long_path(self).replace('/', '__')
 
+    def apply_styles(self, is_root=True):
+        iommi_style = get_iommi_style_name(self)
+        result = apply_style(iommi_style, self, is_root=is_root)
+
+        for k, v in items(self.get_declared('refinable_members')):
+            if isinstance(v, Traversable):
+                setattr(result, k, v.apply_styles(is_root=False))
+
+        return result
+
     def bind(self, *, parent=None, request=None):
         assert parent is None or parent._is_bound
         assert not self._is_bound
 
         result = copy.copy(self)
 
-        if parent:
-            is_root = False
-            iommi_style = get_iommi_style_name(parent)
-        else:
+        if parent is None:
             is_root = True
-            iommi_style = get_iommi_style_name(self)
+            result = result.apply_styles()
+            result.refine_done()
+        else:
+            is_root = False
 
-        result = apply_style(iommi_style, result, is_root)
         result._declared = self
-
         del self  # to prevent mistakes when changing the code below
 
-        if parent is None:
+        if is_root:
             result._request = request
             if result._name is None:
                 result._name = 'root'

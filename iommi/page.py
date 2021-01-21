@@ -32,11 +32,8 @@ from iommi.part import (
     Part,
     PartType,
 )
-from iommi.reinvokable import reinvokable
-from iommi.traversable import (
-    EvaluatedRefinable,
-    Traversable,
-)
+from iommi.refinable import EvaluatedRefinable
+from iommi.traversable import Traversable
 
 
 @with_meta
@@ -44,6 +41,7 @@ from iommi.traversable import (
     parameter='_parts_dict',
     is_member=lambda obj: isinstance(obj, (Part, str) + template_types),
     sort_key=lambda x: 0,
+    add_init_kwargs=False,
 )
 class Page(Part):
     """
@@ -55,20 +53,15 @@ class Page(Part):
     title: str = EvaluatedRefinable()
     member_class: Type[Fragment] = Refinable()
     context = Refinable()  # context is evaluated, but in a special way so gets no EvaluatedRefinable type
+    parts: Dict[str, PartType] = Refinable()
 
     class Meta:
         member_class = Fragment
 
-    @reinvokable
-    @dispatch(
-        parts=EMPTY,
-        context=EMPTY,
-    )
-    def __init__(self, *, _parts_dict: Dict[str, PartType] = None, parts: dict, **kwargs):
-        super(Page, self).__init__(**kwargs)
+        parts = EMPTY
+        context = EMPTY
 
-        self.parts = {}  # This is just so that the repr can survive if it gets triggered before parts is set properly
-
+    def on_refine_done(self):
         # First we have to up sample parts that aren't Part into Fragment
         def as_fragment_if_needed(k, v):
             if v is None:
@@ -78,10 +71,12 @@ class Page(Part):
             else:
                 return v
 
-        _parts_dict = {k: as_fragment_if_needed(k, v) for k, v in items(_parts_dict)}
-        parts = Namespace({k: as_fragment_if_needed(k, v) for k, v in items(parts)})
+        _parts_dict = {k: as_fragment_if_needed(k, v) for k, v in items(self.get_declared('_parts_dict'))}
+        self.parts = Namespace({k: as_fragment_if_needed(k, v) for k, v in items(self.parts)})
 
-        collect_members(self, name='parts', items=parts, items_dict=_parts_dict, cls=self.get_meta().member_class)
+        collect_members(self, name='parts', items=self.parts, items_dict=_parts_dict, cls=self.get_meta().member_class)
+
+        super(Page, self).on_refine_done()
 
     def on_bind(self) -> None:
         bind_members(self, name='parts')
