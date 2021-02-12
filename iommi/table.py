@@ -133,7 +133,10 @@ from iommi.traversable import (
     Traversable,
 )
 from ._db_compat import base_defaults_factory
-from .refinable import EvaluatedRefinable
+from .refinable import (
+    EvaluatedRefinable,
+    RefinableMembers,
+)
 from .reinvokable import (
     set_and_remember_for_reinvoke,
 )
@@ -1408,9 +1411,9 @@ class Table(Part, Tag):
     header = Refinable()
     model: Type[Model] = Refinable()  # model is evaluated, but in a special way so gets no EvaluatedRefinable type
     rows = Refinable()  # rows is evaluated, but in a special way so gets no EvaluatedRefinable type
-    columns = Refinable()
-    actions: Namespace = Refinable()
-    parts: Namespace = Refinable()
+    columns: Dict[str, Column] = RefinableMembers()
+    actions: Dict[str, Action] = RefinableMembers()
+    parts: Namespace = RefinableMembers()
     bulk: Optional[Form] = EvaluatedRefinable()
     bulk_container: Fragment = Refinable()
     superheader: Namespace = Refinable()

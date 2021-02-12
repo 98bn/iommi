@@ -7,6 +7,7 @@ from typing import (
 )
 
 from tri_declarative import (
+    Namespace,
     Refinable,
     refinable,
 )
@@ -24,6 +25,7 @@ from iommi.evaluate import (
 )
 from iommi.refinable import (
     is_evaluated_refinable,
+    RefinableMembers,
     RefinableObject,
 )
 from iommi.style import (
@@ -50,8 +52,8 @@ class Traversable(RefinableObject):
     context = None
 
     iommi_style: str = Refinable()
-    assets = Refinable()
-    endpoints = Refinable()
+    assets = RefinableMembers()
+    endpoints = RefinableMembers()
 
     _declared_members: Dict[str, 'Traversable']
     _bound_members: Dict[str, 'Traversable']
@@ -205,8 +207,12 @@ class Traversable(RefinableObject):
 
 
 def declared_members(node: Traversable) -> Any:
-    # noinspection PyProtectedMember
-    return node._declared_members
+    assert node.is_refine_done, "Trying to find declared_memberd on RefinableObject without doing refine_done() first"
+    result = Namespace()
+    for k, v in items(node.get_declared('refinable_members')):
+        if isinstance(v, RefinableMembers):
+            result[k] = node.namespace.get(k, Namespace())
+    return result
 
 
 def set_declared_member(node: Traversable, name: str, value: Union[Any, Dict[str, Traversable]]):
@@ -276,7 +282,7 @@ def build_long_path_by_path(root) -> Dict[str, str]:
                 )
                 result[less_short_path] = long_path
 
-        if hasattr(node, '_declared_members'):
+        if isinstance(node, RefinableObject):
             members = declared_members(node)
         elif isinstance(node, dict):
             members = node

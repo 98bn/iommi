@@ -2,11 +2,13 @@ import pytest
 from tri_declarative import (
     class_shortcut,
     declarative,
+    dispatch,
     Namespace,
     Refinable,
 )
 
 from iommi import (
+    Fragment,
     html,
     Page,
     register_style,
@@ -23,6 +25,7 @@ from iommi.member import (
     ForbiddenNamesException,
     NotBoundYetException,
 )
+from iommi.refinable import RefinableMembers
 from iommi.style import unregister_style
 from iommi.traversable import (
     declared_members,
@@ -36,7 +39,7 @@ class Fruit(Traversable):
 
 @declarative(Fruit, 'fruits_dict', add_init_kwargs=False)
 class Basket(Traversable):
-    fruits: Namespace = Refinable()
+    fruits: Namespace = RefinableMembers()
 
     def __init__(self, unknown_types_fall_through=False, **kwargs):
         self.unknown_types_fall_through = unknown_types_fall_through
@@ -142,7 +145,7 @@ def test_bind_via_unapplied_config():
 
     assert (
         str(e.value)
-        == "'Fruit' object has no refinable attribute(s): color.\nAvailable attributes:\n    assets\n    endpoints\n    iommi_style\n    taste\n"
+        == "'Fruit' object has no refinable attribute(s): \"color\".\nAvailable attributes:\n    assets\n    endpoints\n    iommi_style\n    taste\n"
     )
 
 
@@ -168,6 +171,12 @@ def test_inclusion():
     class IncludableFruit(Fruit):
         include = Refinable()
 
+        @dispatch(
+            include=True
+        )
+        def __init__(self, **kwargs):
+            super(IncludableFruit, self).__init__(**kwargs)
+
     class MyBasket(Basket):
         banana = IncludableFruit()
         pear = IncludableFruit()
@@ -191,6 +200,13 @@ def test_unapplied_config_does_not_remember_simple():
     b = MyPage().bind()
     assert '#foo#' in a.__html__()
     assert '#foo#' not in b.__html__()
+
+
+def test_override_grandchild():
+    class MyPage(Page):
+        foo = Fragment('bar', tag='h1')
+
+    assert MyPage(parts__foo__children__text__tag='span').bind().__html__() == '<h1><span>bar</span></h1>'
 
 
 def test_unapplied_config_does_not_remember():
@@ -313,7 +329,7 @@ def test_collect_sets_name():
     basket = MyBasket().refine_done()
     assert declared_members(basket).fruits.orange._name == 'orange'
 
-    basket = MyBasket(fruits__orange=Fruit(taste='sour'))
+    basket = MyBasket(fruits__orange=Fruit(taste='sour')).refine_done()
     assert declared_members(basket).fruits.orange._name == 'orange'
 
 

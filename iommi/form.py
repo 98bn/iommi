@@ -104,7 +104,10 @@ from iommi.part import (
     Part,
     request_data,
 )
-from iommi.refinable import EvaluatedRefinable
+from iommi.refinable import (
+    EvaluatedRefinable,
+    RefinableMembers,
+)
 from iommi.traversable import evaluated_refinable
 
 # Prevent django templates from calling That Which Must Not Be Called
@@ -1302,7 +1305,7 @@ class Form(Part):
 
         post_handler(form.bind(request=req('post')))"""
 
-    actions: Namespace = Refinable()
+    actions: Namespace = RefinableMembers()
     actions_template: Union[str, Template] = Refinable()
     attr: str = (
         EvaluatedRefinable()
@@ -1322,7 +1325,7 @@ class Form(Part):
     page_class: Type[Page] = Refinable()
     auto: Namespace = Refinable()
     attr: str = Refinable()
-    fields: Namespace = Refinable()
+    fields: Namespace = RefinableMembers()
     instance: Any = Refinable()
 
     class Meta:

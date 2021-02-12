@@ -40,13 +40,16 @@ from iommi.member import (
 )
 from iommi.part import Part
 from iommi._web_compat import settings
-from iommi.refinable import EvaluatedRefinable
+from iommi.refinable import (
+    EvaluatedRefinable,
+    RefinableMembers,
+)
 
 
 class MenuBase(Part, Tag):
     tag: str = EvaluatedRefinable()
     sort: bool = EvaluatedRefinable()  # only applies for submenu items
-    sub_menu: Dict = Refinable()
+    sub_menu: Dict = RefinableMembers()
     attrs: Attrs = Refinable()  # attrs is evaluated, but in a special way so gets no EvaluatedRefinable type
     template: Union[str, Template] = EvaluatedRefinable()
 

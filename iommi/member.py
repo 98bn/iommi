@@ -19,6 +19,7 @@ from iommi.base import (
     items,
     values,
 )
+from iommi.refinable import RefinableObject
 from iommi.traversable import (
     declared_members,
     set_declared_member,
@@ -114,6 +115,11 @@ def collect_members(
         if isinstance(item, Traversable):
             item.refine_done()
 
+    for k, v in items_of(unbound_items):
+        if isinstance(v, RefinableObject):
+            print(f"\n{k}: {v.namespace}\n")
+
+    container.namespace[name] = unbound_items
     set_declared_member(container, name, unbound_items)
     setattr(container, name, NotBoundYet(container, name))
 

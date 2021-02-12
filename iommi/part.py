@@ -51,7 +51,10 @@ from ._web_compat import (
     settings,
     template_types,
 )
-from .refinable import EvaluatedRefinable
+from .refinable import (
+    EvaluatedRefinable,
+    RefinableMembers,
+)
 from .sort_after import sort_after
 
 
@@ -68,9 +71,9 @@ class Part(Traversable):
     extra_evaluated: Dict[
         str, Any
     ] = Refinable()  # not EvaluatedRefinable because this is an evaluated container so is special
-    endpoints: Namespace = Refinable()
+    endpoints: Namespace = RefinableMembers()
     # Only the assets used by this part
-    assets: Namespace = Refinable()
+    assets: Namespace = RefinableMembers()
 
     @dispatch(
         extra=EMPTY,

@@ -37,7 +37,10 @@ from iommi.part import (
 )
 
 # https://html.spec.whatwg.org/multipage/syntax.html#void-elements
-from iommi.refinable import EvaluatedRefinable
+from iommi.refinable import (
+    EvaluatedRefinable,
+    RefinableMembers,
+)
 
 _void_elements = [
     'area',
@@ -145,7 +148,7 @@ class Fragment(Part, Tag):
     attrs: Attrs = Refinable()  # attrs is evaluated, but in a special way so gets no EvaluatedRefinable type
     tag = EvaluatedRefinable()
     template: Union[str, Template] = EvaluatedRefinable()
-    children = Refinable()
+    children = RefinableMembers()
 
     @dispatch(
         tag=None,
@@ -171,8 +174,8 @@ class Fragment(Part, Tag):
             *[as_html(part=x, context=context, request=request) for x in values(self.children)],
         )
 
-    def __repr__(self):
-        return f'<{self.__class__.__name__} tag:{self.tag} attrs:{dict(self.attrs) if self.attrs else None!r}>'
+    # def __repr__(self):
+    #     return f'<{self.__class__.__name__} tag:{self.tag} attrs:{dict(self.attrs) if self.attrs else None!r}>'
 
     def on_bind(self) -> None:
         super().on_bind()

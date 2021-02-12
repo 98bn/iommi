@@ -1,3 +1,5 @@
+from typing import Dict
+
 import pytest
 from tri_declarative import (
     dispatch,
@@ -6,7 +8,9 @@ from tri_declarative import (
 )
 
 from iommi.refinable import (
+    prefixes,
     Refinable,
+    RefinableMembers,
     RefinableObject,
     RefinedNamespace,
 )
@@ -14,31 +18,30 @@ from iommi.refinable import (
 
 def test_empty():
     class MyRefinableObject(RefinableObject):
-        def __init__(self, *args, **kwargs):
-            self.args = args
-            self.kwargs = kwargs
+        def __init__(self, a, x=None, **kwargs):
+            self.a = a
+            self.x = x
             super().__init__(**kwargs)
 
     my_refinable = MyRefinableObject(17, x=42)
-    assert my_refinable.namespace == Namespace()
-    assert my_refinable.args == (17,)
-    assert my_refinable.kwargs == dict(x=42)
+    assert my_refinable.a == 17
+    assert my_refinable.x == 42
     assert my_refinable.namespace == Namespace()
 
 
 def test_refinable():
     class MyRefinableObject(RefinableObject):
-        def __init__(self, *args, **kwargs):
-            self.args = args
-            self.kwargs = kwargs
+        def __init__(self, a, x=None, **kwargs):
+            self.a = a
+            self.x = x
             super().__init__(**kwargs)
 
-        a = Refinable()
+        b = Refinable()
 
-    my_refinable = MyRefinableObject(17, x=42, a=4711)
-    assert my_refinable.namespace == Namespace(a=4711)
-    assert my_refinable.args == (17,)
-    assert my_refinable.kwargs == dict(x=42, a=4711)
+    my_refinable = MyRefinableObject(17, x=42, b=4711)
+    assert my_refinable.a == 17
+    assert my_refinable.x == 42
+    assert my_refinable.namespace == Namespace(b=4711)
 
 
 def test_with_meta():
@@ -79,6 +82,63 @@ def test_refine():
     assert isinstance(my_refined_namespacey, MyRefinableObject)
 
 
+@pytest.mark.parametrize(
+    'path, result',
+    [
+        ('', []),
+        ('foo', ['foo']),
+        ('foo__bar', ['foo', 'foo__bar']),
+    ],
+)
+def test_prefixes(path, result):
+    assert list(prefixes(path)) == result
+
+
+class Fruit(RefinableObject):
+    taste: str = Refinable()
+    color: str = Refinable()
+
+
+class Basket(RefinableObject):
+    fruits: Dict[str, Fruit] = RefinableMembers()
+
+
+def test_refine_recursive():
+
+    basket = Basket(fruits__banana=Fruit(color='yellow'))
+    basket = basket.refine(fruits__banana__taste='good')
+    basket.refine_done()
+    basket.fruits.banana.refine_done()
+
+    assert basket.fruits.banana.taste == 'good'
+    assert basket.fruits.banana.color == 'yellow'
+    assert (
+        str(basket.namespace.as_stack()) == "["
+        "('base', {'fruits__banana': <Fruit Namespace(color=yellow)>}), "
+        "('refine', {'fruits__banana__taste': 'good'})"
+        "]"
+    )
+
+
+def test_refine_recursive_defaults():
+    basket = Basket(fruits__banana=Fruit(color='yellow'))
+    basket = basket.refine_defaults(
+        fruits__banana__color='blue',
+        fruits__banana__taste='good',
+    )
+    basket.refine_done()
+    basket.fruits.banana.refine_done()
+
+    assert basket.fruits.banana.taste == 'good'
+    assert basket.fruits.banana.color == 'yellow'
+    assert (
+        str(basket.namespace.as_stack()) == "["
+        "('refine defaults', {'fruits__banana__color': 'blue', 'fruits__banana__taste': 'good'}), "
+        "('base', {'fruits__banana': <Fruit Namespace(color=yellow)>})"
+        "]"
+    )
+
+
 def test_refine_defaults():
     class MyRefinableObject(RefinableObject):
         a = Refinable()
@@ -106,7 +166,7 @@ def test_done_refine():
 def test_no_double_done_refine():
     with pytest.raises(AssertionError) as e:
         RefinableObject().refine_done().refine_done()
-    assert 'already finalized' in str(e.value)
+    assert 'refine_done() already invoked on' in str(e.value)
 
 
 def test_refined_namespace():

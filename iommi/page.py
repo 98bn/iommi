@@ -32,7 +32,10 @@ from iommi.part import (
     Part,
     PartType,
 )
-from iommi.refinable import EvaluatedRefinable
+from iommi.refinable import (
+    EvaluatedRefinable,
+    RefinableMembers,
+)
 from iommi.traversable import Traversable
 
 
@@ -53,7 +56,7 @@ class Page(Part):
     title: str = EvaluatedRefinable()
     member_class: Type[Fragment] = Refinable()
     context = Refinable()  # context is evaluated, but in a special way so gets no EvaluatedRefinable type
-    parts: Dict[str, PartType] = Refinable()
+    parts: Dict[str, PartType] = RefinableMembers()
 
     class Meta:
         member_class = Fragment
